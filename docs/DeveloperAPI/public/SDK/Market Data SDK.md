@@ -1,8 +1,10 @@
 # Market Data SDK
 
-*Market Data SDK* allows to interact with the market data APIs to fetch real-time market information such as LTP (Last Traded Price), Option Chain, and Quotes. It also provides WebSocket WebSocket support for subscribing to and receiving live market data.
+The Market Data SDK provides seamless integration with the Blitz Gateway Market Data APIs, enabling developers to access real-time market information such as Last Traded Price (LTP), Option Chain, and Quotes.
 
-The SDK supports authentication, fetching market data, subscribing to market feeds, and handling WebSocket connections.
+It offers robust WebSocket support for subscribing to and receiving live market updates, ensuring low-latency data delivery.
+
+The SDK includes built-in functionality for secure authentication, market data retrieval, subscription management, and efficient handling of WebSocket connections, making it an ideal choice for building high-performance trading and analytics applications.
 
 ---
 
@@ -14,6 +16,7 @@ The SDK supports authentication, fetching market data, subscribing to market fee
   - Get LTP (Last Traded Price) for given instruments.
   - Get Option Chain data.
   - Get real-time quotes for instruments.
+  - Get historial data.
 - **WebSocket Streaming**: 
   - Subscribe to live market data for specific instruments.
   - Handle real-time market depth and index updates.
@@ -28,6 +31,12 @@ The SDK supports authentication, fetching market data, subscribing to market fee
 git clone https://github.com/yourusername/market-data-sdk.git
 cd market-data-sdk
 ```
+OR
+
+Run the command
+```bash
+pip install blitz-sdk
+```
 
 ### 2. Install dependencies:
 This SDK requires Python 3.x and the `requests` and `websocket-client` libraries.
@@ -38,9 +47,10 @@ pip install -r requirements.txt
 
 ---
 
+
 ## Setup & Configuration
 
-To start using the SDK,  need the following:
+To start using the SDK, need the following:
 - **API Key**: With  API key to acess *SDK* and  authenticat via [AppLogin](../MarketDataSrevr/AppLogin.md)
 .
 - **User ID**:  unique user identifier.
@@ -66,7 +76,7 @@ from marketdata.market_data import MarketDataClient
 from marketdata.websocket_stream_handler import MarketDataWebSocketClient
 
 client = MarketDataClient(
-    app_key="app-key",
+    api_key="api-key",
     user_id="user-id"
 )
 ```
@@ -77,19 +87,22 @@ client = MarketDataClient(
 
 ### 3. Fetching Market Data
 
-#### LTP (Last Traded Price)
+### LTP (Last Traded Price)
 
-To get the LTP for specific instruments:
+Retrieve the Last Traded Price (LTP) for one or more instruments using the `get_ltp()` method.
 
 ```python
-instrument_ids = [1010010002000001, 1010010002000002]
+instrument_ids = [1010010002000001, "NSECM|RELIANCE"]
 ltp = client.get_ltp(instrument_ids)
 print("LTP Response:", ltp)
 ```
+Users can provide either the Instrument ID or the Instrument Name (in the format `ExchangeSegment|Symbol`) to fetch the LTP.
 
-#### Option Chain
+---
 
-To fetch the option chain for a given symbl and expiry date:
+### Option Chain
+
+Fetch the Option Chain for a specific symbol and expiry date using the `get_option_chain()` method.
 
 ```python
 symbol = "NIFTY"
@@ -98,44 +111,64 @@ option_chain = client.get_option_chain(symbol, expiry_date)
 print("Option Chain Response:", option_chain)
 ```
 
-#### Quotes
+This method retrieves all available call and put options for the given symbol and expiry date.
 
-To get quotes for given instruments:
+---
+
+### Quotes
+
+Retrieves detailed market quotes for one or more instruments.
+This method provides complete quote information — including last traded price, volume, and other key market data fields.
 
 ```python
+instrument_ids = ["NSECM|RELIANCE"]
 quote_data = client.get_quote(instrument_ids)
 print("Quote Response:", quote_data)
 ```
 
 ---
 
+### Historcal Data
+
+Fetch historical market data for a given instrument using the get_historical_data() method. This allows you to analyze past price movements and trends over a specified time range.
+
+```python
+hist_data = client.get_historical_data("IRFC", "2024-01-11", "2025-11-11")
+print("Historical Data Response:", hist_data)
+```
+
+---
+
 ### 4. WebSocket for Live Market Data
 
-To subscribe to real-time market data via WebSocket:
+Use the WebSocket interface to subscribe to and receive real-time market data updates such as ticks, quotes, and depth information.
 
 ```python
 
-# Define your instrument(s)
-Instruments = [1010010002000001]         #using numeric instrument ID
-# Instruments = "NSECM|RELIANCE"     # symbol format
+import time
 
+# Define your instrument(s)
+instruments = [1010010002000001]        # Using numeric Instrument ID
+# instruments = ["NSECM|RELIANCE"]     # Or use symbol format
+
+# Define callback function to handle incoming data
 def my_callback_function(data):
     print("New tick data received:", data)
 
 # Set callback
 client.on_message = my_callback_function
 
-# Connect WebSocket
+# Establish WebSocket connection
 client.connect_ws()
 print("WebSocket connection established.")
 
-# Subscribe
-client.subscribe_market_data(Instruments)
+# Subscribe to live market data
+client.subscribe_market_data(instruments)
 
-#Unsubscribe
-client.unsubscribe_market_data(instruments)
+# Unsubscribe (if needed)
+# client.unsubscribe_market_data(instruments)
 
-# Keep the script alive to receive ticks
+# Keep the script running to continue receiving ticks
 while True:
     time.sleep(1)
 
@@ -143,23 +176,35 @@ while True:
 
 ### WebSocket Methods:
 - **connect_ws()**: Starts the WebSocket connection.
+- **stop_websocket()**: Stops the WebSocket connection.
 - **subscribe_market_data(instrument_ids)**: Subsbscribes to live market data for given instruments.
 - **unsubscribe_market_data(instrument_ids)**: Unsubscribes from the market data.
-- **stop_websocket()**: Stops the WebSocket connection.
+
 
 ---
 
 ## Advanced Usage
 
 ### Reconnection Logic:
-The 8MarketDataWebSocketClien8thas automatic reconnection logic, which attempts to reconnect when the connection is lost.
+The MarketDataWebSocketClienthas automatic reconnection logic, which attempts to reconnect when the connection is lost.
 
 ### Callbacks:
-can define custom callbacks for handling WebSocket events:
+The SDK allows developers to define custom callback functions for handling various WebSocket events. These callbacks enable you to control how real-time data, errors, and connection closures are managed within your application.
 
-- **on_message**: The `on_message` callback is used to handle real-time data received over WebSocket. The user can assign their own function to this callback, which will be triggered every time a new WebSocket message arrives.
-for more Info visit [callbackimplementation](callbackimplementation)
+- **on_message**: Triggered whenever a new WebSocket message (e.g., tick or market update) is received.
+Developers can assign a custom function to process or display incoming data.
+
+
+- **on_error**: Invoked when an error occurs during the WebSocket connection or message processing.
+This callback can be used for logging, reconnection logic, or error notifications.
+
+- **on_close**: Called when the WebSocket connection is closed, either intentionally or due to a network issue.
+Use this callback to perform cleanup tasks or attempt reconnection.
+
+For more Info visit [callbackimplementation](callbackimplementation)
+
 ---
+
 
 ## Error Handling
 
